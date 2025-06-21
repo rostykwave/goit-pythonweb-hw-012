@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: goit-postgres-hw10
+    environment:
+      POSTGRES_DB: contacts_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: htchtc26
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: goit-app-hw10
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:htchtc26@postgres:5432/contacts_db
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
