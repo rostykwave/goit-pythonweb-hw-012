@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jose import JWTError, jwt
 
 from src.database.db import get_db
-from src.database.models import User
+from src.database.models import User, UserRole
 from src.conf.config import config
 from src.services.users import UserService
 
@@ -126,18 +126,16 @@ async def get_current_user(
 
     # Try to get user from cache first
     cached_user_data = await cache_service.get_user(username)
-    if cached_user_data:
-        # Convert dict back to User model
-        user = User(**cached_user_data)
-        return user
     
     # Try to get user from cache first
     cached_user_data = await cache_service.get_user(username)
     if cached_user_data:
         try:
             # Validate cached data structure
-            required_fields = ["id", "username", "email", "confirmed"]
+            required_fields = ["id", "username", "email", "confirmed", "role"]
             if all(field in cached_user_data for field in required_fields):
+                # Convert role string back to enum
+                cached_user_data["role"] = UserRole(cached_user_data["role"])
                 user = User(**cached_user_data)
                 return user
             else:
@@ -160,8 +158,20 @@ async def get_current_user(
         "email": user.email,
         "confirmed": user.confirmed,
         "avatar": user.avatar,
+        "role": user.role.value
         # Remove hashed_password from cache for security
     }
     await cache_service.set_user(username, user_dict)
 
     return user
+
+async def get_current_admin(current_user: User = Depends(get_current_user)):
+    """
+    Dependency to ensure current user is an admin.
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions. Admin role required."
+        )
+    return current_user

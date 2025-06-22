@@ -9,6 +9,7 @@ from src.schemas import UserCreate
 from src.conf.config import config
 
 from src.services.cache import cache_service
+from src.database.models import UserRole 
 
 class UserService:
     """Service for user-related operations."""
@@ -136,3 +137,15 @@ class UserService:
             await cache_service.delete_user(user.username)
     
         return await self.repository.update_user_password(email, new_password)
+    
+    async def get_all_users(self, skip: int = 0, limit: int = 100):
+        """Get all users (admin function)."""
+        return await self.repository.get_all_users(skip, limit)
+    
+    async def update_user_role(self, user_id: int, role: UserRole):
+        """Update user role (admin function)."""
+        user = await self.repository.get_user_by_id(user_id)
+        if user:
+            await cache_service.delete_user(user.username)
+        
+        return await self.repository.update_user_role(user_id, role)

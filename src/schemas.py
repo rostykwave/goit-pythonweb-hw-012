@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import date
 from typing import Optional
+from src.database.models import UserRole
 
 class ContactBase(BaseModel):
     """Base Pydantic model for Contact objects.
@@ -54,6 +55,7 @@ class User(BaseModel):
     username: str
     email: str
     avatar: str
+    role: UserRole
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -66,6 +68,7 @@ class UserCreate(BaseModel):
     username: str
     email: str
     password: str
+    role: UserRole = UserRole.USER
 
 class Token(BaseModel):
     """Authentication token model.

@@ -1,7 +1,7 @@
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.models import User
+from src.database.models import User, UserRole
 from src.schemas import UserCreate
 
 class UserRepository:
@@ -97,3 +97,17 @@ class UserRepository:
         await self.db.commit()
     
         return await self.get_user_by_email(email)
+    
+    async def get_all_users(self, skip: int = 0, limit: int = 100):
+        """Get all users with pagination."""
+        stmt = select(User).offset(skip).limit(limit)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+    
+    async def update_user_role(self, user_id: int, role: UserRole):
+        """Update user role."""
+        stmt = update(User).where(User.id == user_id).values(role=role)
+        await self.db.execute(stmt)
+        await self.db.commit()
+        
+        return await self.get_user_by_id(user_id)

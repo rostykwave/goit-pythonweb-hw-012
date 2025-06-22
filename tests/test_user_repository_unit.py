@@ -118,3 +118,73 @@ async def test_confirmed_email(user_repository, mock_session):
     # Assertions
     assert existing_user.confirmed is True
     mock_session.commit.assert_awaited_once()
+
+@pytest.mark.asyncio
+async def test_update_user_password(user_repository, mock_session):
+    # Setup
+    existing_user = User(id=1, username="testuser", email="test@example.com", hashed_password="old_password")
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = existing_user
+    mock_session.execute = AsyncMock(return_value=mock_result)
+
+    # Call method
+    result = await user_repository.update_user_password(email="test@example.com", new_password="new_password")
+
+    # Assertions
+    assert result is not None
+    assert result.email == "test@example.com"
+    mock_session.execute.assert_called()
+    mock_session.commit.assert_awaited_once()
+
+@pytest.mark.asyncio
+async def test_get_all_users(user_repository, mock_session):
+    # Setup
+    users = [
+        User(id=1, username="user1", email="user1@example.com"),
+        User(id=2, username="user2", email="user2@example.com")
+    ]
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = users
+    mock_session.execute = AsyncMock(return_value=mock_result)
+
+    # Call method
+    result = await user_repository.get_all_users(skip=0, limit=10)
+
+    # Assertions
+    assert len(result) == 2
+    assert result[0].username == "user1"
+    assert result[1].username == "user2"
+    mock_session.execute.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_update_user_role(user_repository, mock_session):
+    # Setup
+    from src.database.models import UserRole
+    existing_user = User(id=1, username="testuser", email="test@example.com", role=UserRole.USER)
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = existing_user
+    mock_session.execute = AsyncMock(return_value=mock_result)
+
+    # Call method
+    result = await user_repository.update_user_role(user_id=1, role=UserRole.ADMIN)
+
+    # Assertions
+    assert result is not None
+    assert result.id == 1
+    mock_session.execute.assert_called()
+    mock_session.commit.assert_awaited_once()
+
+@pytest.mark.asyncio
+async def test_update_avatar_user_not_found(user_repository, mock_session):
+    # Setup - simulate user not found
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_session.execute = AsyncMock(return_value=mock_result)
+
+    # Call method
+    result = await user_repository.update_avatar(user_id=999, avatar_url="http://example.com/avatar.jpg")
+
+    # Assertions
+    assert result is None
+    mock_session.commit.assert_not_awaited()
+    mock_session.refresh.assert_not_awaited()

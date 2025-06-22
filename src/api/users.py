@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Request
+from fastapi import APIRouter, Depends, UploadFile, File, Request, HTTPException
 from src.schemas import User
-from src.services.auth import get_current_user
+from src.services.auth import get_current_user, get_current_admin
 from src.services.users import UserService
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database.db import get_db
+from src.database.models import UserRole
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -27,7 +28,7 @@ async def me(request: Request, user: User = Depends(get_current_user)):
 @router.patch("/avatar", response_model=User)
 async def update_avatar(
     file: UploadFile = File(),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -52,3 +53,29 @@ async def update_avatar(
     await cache_service.delete_user(current_user.username)
     
     return updated_user
+
+@router.get("/", response_model=list[User], description="Get all users (Admin only)")
+async def get_all_users(
+    skip: int = 0,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """Get all users - admin only endpoint."""
+    user_service = UserService(db)
+    users = await user_service.get_all_users(skip, limit)
+    return users
+
+@router.patch("/{user_id}/role", response_model=User, description="Update user role (Admin only)")
+async def update_user_role(
+    user_id: int,
+    role: UserRole,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """Update user role - admin only endpoint."""
+    user_service = UserService(db)
+    user = await user_service.update_user_role(user_id, role)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user

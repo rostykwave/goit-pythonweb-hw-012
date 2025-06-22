@@ -1,10 +1,15 @@
-from sqlalchemy import String, Date, Text, Boolean, ForeignKey
+from sqlalchemy import String, Date, Text, Boolean, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, relationship
 from datetime import date
 from typing import Optional
+from enum import Enum
 
 class Base(DeclarativeBase):
     pass
+
+class UserRole(str, Enum):
+    USER = "user"
+    ADMIN = "admin"
 
 class User(Base):
     """
@@ -17,6 +22,7 @@ class User(Base):
         hashed_password (str): Bcrypt hashed password
         confirmed (bool): Email confirmation status
         avatar (str, optional): URL to user avatar image
+        role (UserRole): User role (USER or ADMIN)
         contacts (List[Contact]): List of user's contacts
     """
     __tablename__ = "users"
@@ -27,6 +33,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255))
     confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
     avatar: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    role: Mapped[UserRole] = mapped_column(SQLEnum(UserRole), default=UserRole.USER)
     
     contacts: Mapped[list["Contact"]] = relationship("Contact", back_populates="owner")
 

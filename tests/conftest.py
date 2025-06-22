@@ -7,7 +7,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 from main import app
-from src.database.models import Base, User
+from src.database.models import Base, User, UserRole
 from src.database.db import get_db
 from src.services.auth import create_access_token, Hash
 
@@ -29,6 +29,11 @@ test_user = {
     "password": "12345678",
 }
 
+test_admin_user = {
+    "username": "admin",
+    "email": "admin@example.com", 
+    "password": "admin123",
+}
 
 @pytest.fixture(scope="module", autouse=True)
 def init_models_wrap():
@@ -37,19 +42,33 @@ def init_models_wrap():
             await conn.run_sync(Base.metadata.drop_all)
             await conn.run_sync(Base.metadata.create_all)
         async with TestingSessionLocal() as session:
+            # Create regular user
             hash_password = Hash().get_password_hash(test_user["password"])
-            current_user = User(
+            regular_user = User(
                 username=test_user["username"],
                 email=test_user["email"],
                 hashed_password=hash_password,
                 confirmed=True,
                 avatar="https://twitter.com/gravatar",
+                role=UserRole.USER
             )
-            session.add(current_user)
+            session.add(regular_user)
+            
+            # Create admin user
+            admin_hash_password = Hash().get_password_hash(test_admin_user["password"])
+            admin_user = User(
+                username=test_admin_user["username"],
+                email=test_admin_user["email"],
+                hashed_password=admin_hash_password,
+                confirmed=True,
+                avatar="https://twitter.com/gravatar",
+                role=UserRole.ADMIN
+            )
+            session.add(admin_user)
+            
             await session.commit()
 
     asyncio.run(init_models())
-
 
 @pytest.fixture(scope="module")
 def client():
@@ -71,4 +90,9 @@ def client():
 @pytest_asyncio.fixture()
 async def get_token():
     token = await create_access_token(data={"sub": test_user["username"]})
+    return token
+
+@pytest_asyncio.fixture()
+async def get_admin_token():
+    token = create_access_token(data={"sub": test_admin_user["username"]})
     return token
