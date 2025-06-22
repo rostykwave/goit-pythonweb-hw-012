@@ -1,6 +1,5 @@
 from typing import List
-
-from sqlalchemy import select
+from sqlalchemy import select, extract, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models import Contact
@@ -145,11 +144,19 @@ class ContactRepository:
         next_week = today + timedelta(days=7)
         
         stmt = select(Contact).where(
-            (Contact.user_id == user_id) &
-            (((Contact.birth_date.month == today.month) & 
-              (Contact.birth_date.day >= today.day)) |
-            ((Contact.birth_date.month == next_week.month) & 
-            (Contact.birth_date.day <= next_week.day)))
+            and_(
+                Contact.user_id == user_id,
+                or_(
+                    and_(
+                        extract('month', Contact.birth_date) == today.month,
+                        extract('day', Contact.birth_date) >= today.day
+                    ),
+                    and_(
+                        extract('month', Contact.birth_date) == next_week.month,
+                        extract('day', Contact.birth_date) <= next_week.day
+                    )
+                )
+            )
         ).offset(skip).limit(limit)
     
         
