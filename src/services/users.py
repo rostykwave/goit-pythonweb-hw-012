@@ -9,10 +9,28 @@ from src.schemas import UserCreate
 from src.conf.config import config
 
 class UserService:
+    """Service for user-related operations."""
+
     def __init__(self, db: AsyncSession):
+        """
+        Initialize UserService.
+        
+        Args:
+            db (AsyncSession): Database session
+        """
         self.repository = UserRepository(db)
 
     async def create_user(self, body: UserCreate):
+        """
+        Create new user account.
+        
+        Args:
+            body (UserCreate): User creation data
+            avatar (str, optional): Avatar URL
+            
+        Returns:
+            User: Created user object
+        """
         avatar = None
         try:
             g = Gravatar(body.email)
@@ -23,15 +41,52 @@ class UserService:
         return await self.repository.create_user(body, avatar)
 
     async def get_user_by_id(self, user_id: int):
+        """
+        Get user by ID.
+        
+        Args:
+            user_id (int): User ID
+            
+        Returns:
+            User | None: User object if found, None otherwise
+        """
         return await self.repository.get_user_by_id(user_id)
 
     async def get_user_by_username(self, username: str):
+        """
+        Get user by username.
+        
+        Args:
+            username (str): Username
+            
+        Returns:
+            User | None: User object if found, None otherwise
+        """
         return await self.repository.get_user_by_username(username)
 
     async def get_user_by_email(self, email: str):
+        """
+        Get user by email address.
+        
+        Args:
+            email (str): User's email address
+            
+        Returns:
+            User | None: User object if found, None otherwise
+        """
         return await self.repository.get_user_by_email(email)
 
     async def update_avatar(self, user_id: int, file):
+        """
+        Update user avatar URL.
+        
+        Args:
+            user_id (int): User ID
+            avatar_url (str): New avatar URL
+            
+        Returns:
+            User | None: Updated user object if found, None otherwise
+        """
         cloudinary.config(
             cloud_name=config.CLOUDINARY_NAME,
             api_key=config.CLOUDINARY_API_KEY,

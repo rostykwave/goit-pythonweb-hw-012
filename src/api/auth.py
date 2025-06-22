@@ -16,6 +16,21 @@ async def register_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Register a new user account.
+    
+    Args:
+        body (UserCreate): User registration data including username, email, password
+        bt (BackgroundTasks): Background task queue for sending confirmation emails
+        request (Request): HTTP request object for generating confirmation URLs
+        db (AsyncSession): Database session dependency
+        
+    Returns:
+        UserResponse: Created user information
+        
+    Raises:
+        HTTPException: 409 if email already exists
+    """
     user_service = UserService(db)
 
     email_user = await user_service.get_user_by_email(user_data.email)
@@ -42,6 +57,19 @@ async def register_user(
 async def login_user(
     form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
 ):
+    """
+    User authentication endpoint.
+    
+    Args:
+        body (OAuth2PasswordRequestForm): Login credentials (username/email and password)
+        db (AsyncSession): Database session dependency
+        
+    Returns:
+        dict: Access token and token type
+        
+    Raises:
+        HTTPException: 401 if credentials are invalid
+    """
     user_service = UserService(db)
     user = await user_service.get_user_by_username(form_data.username)
     if not user or not Hash().verify_password(form_data.password, user.hashed_password):
@@ -60,6 +88,19 @@ async def login_user(
 
 @router.get("/confirmed_email/{token}")
 async def confirmed_email(token: str, db: AsyncSession = Depends(get_db)):
+    """
+    Confirm user email with verification token.
+    
+    Args:
+        token (str): Email confirmation token
+        db (AsyncSession): Database session dependency
+        
+    Returns:
+        dict: Confirmation message
+        
+    Raises:
+        HTTPException: 400 if token is invalid or expired
+    """
     email = await get_email_from_token(token)
     user_service = UserService(db)
     user = await user_service.get_user_by_email(email)
@@ -79,6 +120,18 @@ async def request_email(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Request new email confirmation.
+    
+    Args:
+        body (RequestEmail): Email address for confirmation
+        background_tasks (BackgroundTasks): Background task queue
+        request (Request): HTTP request object
+        db (AsyncSession): Database session dependency
+        
+    Returns:
+        dict: Confirmation message
+    """
     user_service = UserService(db)
     user = await user_service.get_user_by_email(body.email)
 

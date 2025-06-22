@@ -12,17 +12,47 @@ from src.conf.config import config
 from src.services.users import UserService
 
 class Hash:
+    """Password hashing utility class."""
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     def verify_password(self, plain_password, hashed_password):
+        """
+        Verify plain password against hashed password.
+        
+        Args:
+            plain_password (str): Plain text password
+            hashed_password (str): Hashed password from database
+            
+        Returns:
+            bool: True if password matches, False otherwise
+        """
         return self.pwd_context.verify(plain_password, hashed_password)
 
     def get_password_hash(self, password: str):
+        """
+        Hash plain password.
+        
+        Args:
+            password (str): Plain text password
+            
+        Returns:
+            str: Hashed password
+        """
         return self.pwd_context.hash(password)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 async def create_access_token(data: dict, expires_delta: Optional[int] = None):
+    """
+    Create JWT access token.
+    
+    Args:
+        data (dict): Token payload data
+        expires_delta (int, optional): Token expiration time in seconds
+        
+    Returns:
+        str: Encoded JWT token
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(UTC) + timedelta(seconds=expires_delta)
@@ -37,6 +67,19 @@ async def create_access_token(data: dict, expires_delta: Optional[int] = None):
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
 ):
+    """
+    Get current user from JWT token.
+    
+    Args:
+        token (str): JWT access token
+        db (AsyncSession): Database session dependency
+        
+    Returns:
+        User: Current authenticated user
+        
+    Raises:
+        HTTPException: 401 if token is invalid or user not found
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
