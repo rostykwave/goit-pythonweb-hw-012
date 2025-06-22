@@ -42,7 +42,6 @@ class UserService:
 
         new_user = await self.repository.create_user(body, avatar)
     
-        # Clear any existing cache for this username
         await cache_service.delete_user(body.username)
     
         return new_user
@@ -114,7 +113,6 @@ class UserService:
         
         result = await self.repository.update_avatar(user_id, avatar_url)
             
-        # Clear cache after avatar update
         user = await self.repository.get_user_by_id(user_id)
         if user:
             await cache_service.delete_user(user.username)
@@ -127,7 +125,14 @@ class UserService:
         """
         user = await self.repository.get_user_by_email(email)
         if user:
-            # Clear cache before update
             await cache_service.delete_user(user.username)
         
         return await self.repository.confirmed_email(email)
+    
+    async def update_user_password(self, email: str, new_password: str):
+        """Update user password and clear cache."""
+        user = await self.repository.get_user_by_email(email)
+        if user:
+            await cache_service.delete_user(user.username)
+    
+        return await self.repository.update_user_password(email, new_password)

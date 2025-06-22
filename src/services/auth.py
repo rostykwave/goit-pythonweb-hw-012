@@ -74,12 +74,19 @@ def create_email_token(data: dict):
     token = jwt.encode(to_encode, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
     return token
 
-async def get_email_from_token(token: str):
+async def get_email_from_token(token: str, action_type: str = None):
     try:
         payload = jwt.decode(
             token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM]
         )
         email = payload["sub"]
+        
+        if action_type and payload.get("action") != action_type:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid token type",
+            )
+            
         return email
     except JWTError as e:
         raise HTTPException(

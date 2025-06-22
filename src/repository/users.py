@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models import User
@@ -89,3 +89,11 @@ class UserRepository:
         user = await self.get_user_by_email(email)
         user.confirmed = True
         await self.db.commit()
+
+    async def update_user_password(self, email: str, new_password: str):
+        """Update user password in database."""
+        stmt = update(User).where(User.email == email).values(hashed_password=new_password)
+        await self.db.execute(stmt)
+        await self.db.commit()
+    
+        return await self.get_user_by_email(email)

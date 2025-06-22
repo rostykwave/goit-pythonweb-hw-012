@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordRequestForm
 from src.schemas import UserCreate, Token, User, RequestEmail
 from src.services.auth import create_access_token, Hash, get_email_from_token
 from src.services.users import UserService
-from src.services.email import send_email 
+from src.services.email import send_email, send_password_reset_email
 from src.database.db import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -145,3 +145,39 @@ async def request_email(
             send_email, user.email, user.username, request.base_url
         )
     return {"message": "Check your email for confirmation"}
+
+@router.post("/forgot-password")
+async def forgot_password(
+    body: RequestEmail,
+    background_tasks: BackgroundTasks,  
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Request password reset email."""
+    user_service = UserService(db)
+    user = await user_service.get_user_by_email(body.email)
+    if user:
+        background_tasks.add_task(
+            send_password_reset_email, user.email, user.username, request.base_url
+        )
+    return {"message": "If email exists, password reset link has been sent"}
+
+@router.post("/reset-password/{token}")
+async def reset_password(
+    token: str,
+    new_password: str = Body(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reset password using token."""
+    email = await get_email_from_token(token, "reset_password")
+    user_service = UserService(db)
+    user = await user_service.get_user_by_email(email)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Invalid token"
+        )
+    
+    hashed_password = Hash().get_password_hash(new_password)
+    await user_service.update_user_password(email, hashed_password)
+    return {"message": "Password reset successfully"}
