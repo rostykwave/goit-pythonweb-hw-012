@@ -62,5 +62,23 @@ class Config:
     CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
     """str: Cloudinary API secret for authentication."""
 
+    REDIS_HOST: str = "localhost"
+    """str: Redis server hostname (default: localhost)."""
+    
+    REDIS_PORT: int = 6379
+    """int: Redis server port (default: 6379)."""
+    
+    REDIS_PASSWORD: str | None = None
+    """str | None: Redis server password (default: None for no authentication)."""
+    
+    REDIS_DB: int = 0
+    """int: Redis database number (default: 0)."""
+    
+    REDIS_URL: str = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+    """str: Complete Redis connection URL constructed from host, port, and database."""
+    
+    CACHE_EXPIRE_TIME: int = 900  # 15 minutes
+    """int: Cache expiration time in seconds (default: 900 seconds = 15 minutes)."""
+
 config = Config()
 """Config: Global configuration instance."""

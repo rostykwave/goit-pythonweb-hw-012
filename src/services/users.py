@@ -8,6 +8,8 @@ from src.repository.users import UserRepository
 from src.schemas import UserCreate
 from src.conf.config import config
 
+from src.services.cache import cache_service
+
 class UserService:
     """Service for user-related operations."""
 
@@ -38,7 +40,12 @@ class UserService:
         except Exception as e:
             print(e)
 
-        return await self.repository.create_user(body, avatar)
+        new_user = await self.repository.create_user(body, avatar)
+    
+        # Clear any existing cache for this username
+        await cache_service.delete_user(body.username)
+    
+        return new_user
 
     async def get_user_by_id(self, user_id: int):
         """
@@ -105,7 +112,22 @@ class UserService:
             version=upload_result['version']
         )[0]
         
-        return await self.repository.update_avatar(user_id, avatar_url)
+        result = await self.repository.update_avatar(user_id, avatar_url)
+            
+        # Clear cache after avatar update
+        user = await self.repository.get_user_by_id(user_id)
+        if user:
+            await cache_service.delete_user(user.username)
+        
+        return result
     
     async def confirmed_email(self, email: str):
+        """
+        Confirm user email and clear cache.
+        """
+        user = await self.repository.get_user_by_email(email)
+        if user:
+            # Clear cache before update
+            await cache_service.delete_user(user.username)
+        
         return await self.repository.confirmed_email(email)

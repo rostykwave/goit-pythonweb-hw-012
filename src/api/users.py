@@ -45,5 +45,10 @@ async def update_avatar(
         HTTPException: If file upload or processing fails
     """
     user_service = UserService(db)
-    user = await user_service.update_avatar(current_user.id, file)
-    return user
+    updated_user = await user_service.update_avatar(current_user.id, file)
+    
+    # Clear cache after avatar update
+    from src.services.cache import cache_service
+    await cache_service.delete_user(current_user.username)
+    
+    return updated_user

@@ -25,5 +25,15 @@ services:
       - postgres
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  redis_data:
