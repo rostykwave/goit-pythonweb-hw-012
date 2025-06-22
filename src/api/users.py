@@ -17,11 +17,19 @@ async def me(request: Request, user: User = Depends(get_current_user)):
     """
     Get current user information.
     
+    This endpoint allows authenticated users to retrieve their own profile information.
+    Rate limited to 10 requests per minute to prevent abuse.
+    
     Args:
-        current_user (User): Current authenticated user
+        request (Request): HTTP request object for rate limiting
+        user (User): Current authenticated user from dependency injection
         
     Returns:
-        UserResponse: Current user information
+        User: Current user information including id, username, email, avatar, etc.
+        
+    Raises:
+        HTTPException: 401 if user is not authenticated
+        HTTPException: 429 if rate limit is exceeded (10 requests per minute)
     """
     return user
 
@@ -34,21 +42,27 @@ async def update_avatar(
     """
     Update user avatar image.
     
+    This endpoint allows admin users to update their avatar image.
+    The uploaded image is processed and stored, with the avatar URL updated in the database.
+    Cache is cleared after successful update to ensure fresh data retrieval.
+    
     Args:
-        file (UploadFile): Image file for avatar
-        current_user (User): Current authenticated user
-        db (AsyncSession): Database session dependency
+        file (UploadFile): Image file for avatar upload (JPEG, PNG, etc.)
+        current_user (User): Current authenticated admin user
+        db (AsyncSession): Database session dependency for data operations
         
     Returns:
-        UserResponse: Updated user information with new avatar URL
+        User: Updated user information with new avatar URL
         
     Raises:
-        HTTPException: If file upload or processing fails
+        HTTPException: 401 if user is not authenticated
+        HTTPException: 403 if user is not an admin
+        HTTPException: 400 if file upload fails or invalid file format
+        HTTPException: 500 if database error occurs during avatar update
     """
     user_service = UserService(db)
     updated_user = await user_service.update_avatar(current_user.id, file)
     
-    # Clear cache after avatar update
     from src.services.cache import cache_service
     await cache_service.delete_user(current_user.username)
     
@@ -61,7 +75,26 @@ async def get_all_users(
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):
-    """Get all users - admin only endpoint."""
+    """
+    Get all users in the system.
+    
+    This endpoint is restricted to admin users only and returns a paginated list
+    of all registered users in the system.
+    
+    Args:
+        skip (int, optional): Number of records to skip for pagination. Defaults to 0.
+        limit (int, optional): Maximum number of records to return. Defaults to 100.
+        db (AsyncSession): Database session dependency for data operations
+        current_admin (User): Current authenticated admin user
+        
+    Returns:
+        list[User]: List of user objects with pagination applied
+        
+    Raises:
+        HTTPException: 401 if user is not authenticated
+        HTTPException: 403 if user is not an admin
+        HTTPException: 500 if database error occurs during query
+    """
     user_service = UserService(db)
     users = await user_service.get_all_users(skip, limit)
     return users
@@ -73,7 +106,27 @@ async def update_user_role(
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):
-    """Update user role - admin only endpoint."""
+    """
+    Update user role in the system.
+    
+    This endpoint allows admin users to change the role of any user in the system.
+    Available roles are defined in the UserRole enum (USER, ADMIN).
+    
+    Args:
+        user_id (int): ID of the user whose role should be updated
+        role (UserRole): New role to assign to the user (USER or ADMIN)
+        db (AsyncSession): Database session dependency for data operations
+        current_admin (User): Current authenticated admin user
+        
+    Returns:
+        User: Updated user information with new role
+        
+    Raises:
+        HTTPException: 401 if user is not authenticated
+        HTTPException: 403 if user is not an admin
+        HTTPException: 404 if user with specified ID is not found
+        HTTPException: 500 if database error occurs during role update
+    """
     user_service = UserService(db)
     user = await user_service.update_user_role(user_id, role)
     if not user:

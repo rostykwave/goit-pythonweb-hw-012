@@ -124,34 +124,26 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    # Try to get user from cache first
     cached_user_data = await cache_service.get_user(username)
     
-    # Try to get user from cache first
     cached_user_data = await cache_service.get_user(username)
     if cached_user_data:
         try:
-            # Validate cached data structure
             required_fields = ["id", "username", "email", "confirmed", "role"]
             if all(field in cached_user_data for field in required_fields):
-                # Convert role string back to enum
                 cached_user_data["role"] = UserRole(cached_user_data["role"])
                 user = User(**cached_user_data)
                 return user
             else:
-                # Invalid cache data, delete it
                 await cache_service.delete_user(username)
         except Exception:
-            # Invalid cached data, delete it
             await cache_service.delete_user(username)
 
-    # If not in cache, get from database
     user_service = UserService(db)
     user = await user_service.get_user_by_username(username)
     if user is None:
         raise credentials_exception
 
-    # Cache the user data for future requests
     user_dict = {
         "id": user.id,
         "username": user.username,
@@ -159,7 +151,6 @@ async def get_current_user(
         "confirmed": user.confirmed,
         "avatar": user.avatar,
         "role": user.role.value
-        # Remove hashed_password from cache for security
     }
     await cache_service.set_user(username, user_dict)
 

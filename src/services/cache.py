@@ -24,7 +24,6 @@ class CacheService:
     def _sanitize_user_data(self, user_data: dict) -> dict:
         """Remove sensitive data before caching."""
         sanitized = user_data.copy()
-        # Remove password-related fields
         sensitive_fields = ['password', 'hashed_password', 'refresh_token']
         for field in sensitive_fields:
             sanitized.pop(field, None)
@@ -32,7 +31,6 @@ class CacheService:
     
     def _generate_cache_key(self, user_key: str) -> str:
         """Generate secure cache key."""
-        # Add hash for additional security
         key_hash = hashlib.sha256(user_key.encode()).hexdigest()[:8]
         return f"user:{user_key}:{key_hash}"
     
@@ -53,7 +51,7 @@ class CacheService:
         """Set user in cache with security sanitization."""
         try:
             client = await self.get_redis_client()
-            # Sanitize data before caching
+
             safe_user_data = self._sanitize_user_data(user_data)
             expire_time = expire or config.CACHE_EXPIRE_TIME
             serialized_user = pickle.dumps(safe_user_data)

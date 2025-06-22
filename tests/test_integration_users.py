@@ -38,7 +38,6 @@ async def test_update_avatar_user(mock_cloudinary_url, mock_cloudinary_upload, c
     assert response.status_code == 200, response.text
 
     data = response.json()
-    # Since we're using admin token, we should check admin user data
     from conftest import test_admin_user
     assert data["username"] == test_admin_user["username"]
     assert data["email"] == test_admin_user["email"]

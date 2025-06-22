@@ -176,7 +176,7 @@ async def test_update_user_role(user_repository, mock_session):
 
 @pytest.mark.asyncio
 async def test_update_avatar_user_not_found(user_repository, mock_session):
-    # Setup - simulate user not found
+    # Setup
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None
     mock_session.execute = AsyncMock(return_value=mock_result)
